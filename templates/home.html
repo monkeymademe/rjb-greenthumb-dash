@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+
+<div class="row mb-3">
+      <div class="col-md-8 themed-grid-col">
+      <h2 class="display-5 fw-bold">Camera Feed</h2>
+      <img class="img-fluid" src="{{ url_for('video_feed') }}" alt="Camera Feed">
+</div>
+      <div class="col-6 col-md-4 themed-grid-col">
+<h2 class="display-5 fw-bold">Camera Settings</h2>
+<ul class="list-group">
+  <!-- AfMode -->
+  <li class="list-group-item active" aria-current="true">Auto Focus Mode</li>
+  <li class="list-group-item">
+      <div class="dropdown">
+          <button class="btn btn-secondary dropdown-toggle" type="button" id="afModeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+               AF Mode: Unknown
+           </button>
+           <ul class="dropdown-menu" aria-labelledby="AfMode" id="AfMode">
+               <li><button class="dropdown-item" type="button" onclick="adjustAutofocusMode('0')">Manual</button></li>
+               <li><button class="dropdown-item" type="button" onclick="adjustAutofocusMode('1')">Auto</button></li>
+               <li><button class="dropdown-item" type="button" onclick="adjustAutofocusMode('2')">Continuous</button></li>
+           </ul>
+      </div>
+  </li>
+  <!-- Gain and Exposure -->
+  <li class="list-group-item active" aria-current="true"">Gain and Exposure</li>
+  <li class="list-group-item">
+        <!-- AeEnable -->
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="AeEnable" onchange="adjustAeEnable()">
+            <label class="form-check-label" for="AeEnable">Enable AEC/AGC algorithm</label>
+        </div>
+        <hr>
+        <!-- AeConstraintMode -->
+        <div class="dropdown">
+          <button class="btn btn-secondary dropdown-toggle" type="button" id="AeConstraintModeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+               AE Constraint Mode: Unknown
+           </button>
+           <ul class="dropdown-menu" aria-labelledby="AeConstraintMode" id="AeConstraintMode">
+               <li><button class="dropdown-item" type="button" onclick="adjustAeConstraintMode('0')">Normal</button></li>
+               <li><button class="dropdown-item" type="button" onclick="adjustAeConstraintMode('1')">Highlight</button></li>
+               <li><button class="dropdown-item" type="button" onclick="adjustAeConstraintMode('2')">Shadows</button></li>
+               <li><button class="dropdown-item" type="button" onclick="adjustAeConstraintMode('3')">Custom</button></li>
+           </ul>
+        </div>
+        <hr>
+        <!-- AeExposureMode -->
+        <div class="dropdown">
+          <button class="btn btn-secondary dropdown-toggle" type="button" id="AeExposureModeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+               AE Exposure Mode: Unknown
+           </button>
+           <ul class="dropdown-menu" aria-labelledby="AeExposureMode" id="AeExposureMode">
+               <li><button class="dropdown-item" type="button" onclick="adjustAeExposureMode('0')">Normal</button></li>
+               <li><button class="dropdown-item" type="button" onclick="adjustAeExposureMode('1')">Short</button></li>
+               <li><button class="dropdown-item" type="button" onclick="adjustAeExposureMode('2')">Long</button></li>
+               <li><button class="dropdown-item" type="button" onclick="adjustAeExposureMode('3')">Custom</button></li>
+           </ul>
+        </div>
+        <hr>
+        <!-- AeFlickerMode -->
+        <div class="dropdown">
+          <button class="btn btn-secondary dropdown-toggle" type="button" id="AeFlickerModeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+               AE Flicker Mode: Unknown
+           </button>
+           <ul class="dropdown-menu" aria-labelledby="AeFlickerMode" id="AeFlickerMode">
+               <li><button class="dropdown-item" type="button" onclick="adjustAeFlickerMode('0')">Off</button></li>
+               <li><button class="dropdown-item" type="button" onclick="adjustAeFlickerMode('1')">Manual</button></li>
+           </ul>
+        </div>
+        <!-- AeFlickerPeriod -->
+        <form>
+            <div class="mb-3">
+                <label for="AeFlickerPeriod" class="form-label">Ae Flicker Period:</label>
+                <input type="number" class="form-control" id="AeFlickerPeriod" aria-describedby="emailHelp" oninput="adjustAeFlickerPeriod()" >
+                <div id="emailHelp" class="form-text">in microseconds.</div>
+            </div>
+        </form>
+  </li>
+  <!-- Brightness -->
+  <li class="list-group-item active" aria-current="true">Brightness Control</li>
+  <li class="list-group-item">
+      <div class="form-group">
+            <label for="brightness" class="form-label" id="currentBrightness">Current Brightness:</label>
+            <input type="range" class="form-range" min="-1.0" max="1.0" step="0.1" id="Brightness" onchange="adjustBrightness(this.value)">
+      </div>
+  </li>
+  <!-- Template -->
+  <li class="list-group-item active" aria-current="true">Template Header</li>
+  <li class="list-group-item">
+      Space for a setting 
+  </li>
+</ul>
+
+
+constraint
+
+
+</div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('DOM content loaded');
+
+    // Parse the JSON string into a JavaScript object
+    var initialSettings = {{ camera_settings | tojson }};
+
+    // Call the updateUI
+
+    updateUI(initialSettings);
+});
+
+const settings = {};
+const afModeToString = (mode) => {
+    switch (mode) {
+        case 0: return 'Manual';
+        case 1: return 'Auto';
+        case 2: return 'Continuous';
+        default: return 'Unknown';
+    }
+};
+const aeConstraintModeToString = (mode) => {
+    switch (mode) {
+        case 0: return 'Normal';
+        case 1: return 'Highlight';
+        case 2: return 'Shadows';
+        case 3: return 'Custom';
+        default: return 'Unknown';
+    }
+};
+const aeExposureModeToString = (mode) => {
+    switch (mode) {
+        case 0: return 'Normal';
+        case 1: return 'Short';
+        case 2: return 'Long';
+        case 3: return 'Custom';
+        default: return 'Unknown';
+    }
+};
+const AeFlickerModeToString = (mode) => {
+    switch (mode) {
+        case 0: return 'Off';
+        case 1: return 'Manual';
+    }
+};
+
+function updateUI(settings) {
+    for (const key in settings) {
+            if (key === 'AeFlickerPeriod') {
+                // Update inputbox for AeFlickerPeriod
+                const aeFlickerPeriodInput = document.getElementById('AeFlickerPeriodDropdown');
+                if (aeFlickerPeriodInput) {
+                    aeFlickerPeriodInput.innerText = settings[key];
+                }
+            } else if (key === 'AeFlickerMode') {
+                // Update button text for AeFlickerMode
+                const aeFlickerModeButton = document.getElementById('AeFlickerModeDropdown');
+                if (aeFlickerModeButton) {
+                    aeFlickerModeButton.innerText = `AE Flicker Mode: ${aeFlickerModeToString(settings[key])}`;
+                }
+            } else if (key === 'AeExposureMode') {
+                // Update button text for AeExposureMode
+                const aeExposureModeButton = document.getElementById('AeExposureModeDropdown');
+                if (aeExposureModeButton) {
+                    aeExposureModeButton.innerText = `AE Exposure Mode: ${aeExposureModeToString(settings[key])}`;
+                }
+            } else if (key === 'AeEnable') {
+                // Update the switch state
+                const aeEnableSwitch = document.getElementById('AeEnable');
+                if (aeEnableSwitch) {
+                    aeEnableSwitch.checked = settings[key];
+                }
+            } else if (key === 'Brightness') {
+            document.getElementById('Brightness').value = settings[key];
+            const brightnessSpan = document.getElementById('currentBrightness');
+            if (brightnessSpan) {
+                brightnessSpan.innerText = `Current Brightness: ${settings[key]}`;
+            }
+        } else if (key === 'AeConstraintMode') {
+            // Update button text for AeConstraint
+            const aeConstraintModeButton = document.getElementById('AeConstraintModeDropdown');
+            if (aeConstraintModeButton) {
+                aeConstraintModeButton.innerText = `AE Constraint Mode: ${aeConstraintModeToString(settings[key])}`;
+            }
+        } else if (key === 'AfMode') {
+            // Update button text for AfMode
+            const afModeButton = document.getElementById('afModeDropdown');
+            if (afModeButton) {
+                afModeButton.innerText = `AF Mode: ${afModeToString(settings[key])}`;
+            }
+        } else {
+            console.log(`Skipping unknown setting: ${key}`);
+        }
+    }
+}
+
+//function handleSettingChange(event) {
+//    console.log('Slider changed:', event.target.value);
+//
+//    const key = event.target.id;
+//    const value = event.target.value;
+//
+    // Update UI with the new value
+//    updateUI({ [key]: value });
+//
+    // Update server settings
+//    updateServerSettings({ [key]: parseFloat(value) });
+//}
+
+    // Function to update server settings and UI
+    function updateServerSettings(data) {
+        fetch('/update_settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Settings updated:', data);
+
+            // Update UI with the new settings
+            // updateUI(data);
+        })
+        .catch(error => {
+            console.error('Error updating settings:', error);
+        });
+    }
+
+function adjustAutofocusMode(mode) {
+    // Convert mode to an integer
+    const modeInt = parseInt(mode);
+    // Update UI with the new value
+    updateUI({ AfMode: modeInt });
+    // Update server settings
+    updateServerSettings({ AfMode: modeInt });
+}
+
+function adjustAeConstraintMode(mode) {
+    // Convert mode to an integer
+    const modeInt = parseInt(mode);
+    // Update UI with the new value
+    updateUI({ AeConstraintMode: modeInt });
+    // Update server settings
+    updateServerSettings({ AeConstraintMode: modeInt });
+}
+
+function adjustBrightness(value) {
+    console.log('Brightness changed:', value);
+
+    // Update UI with the new value
+    updateUI({ Brightness: value });
+
+    // Update server settings
+    updateServerSettings({ Brightness: parseFloat(value) });
+}
+
+function adjustAeEnable() {
+    // Get the current state of the switch
+    const aeEnableSwitch = document.getElementById('AeEnable');
+    const newValue = aeEnableSwitch.checked;
+
+    // Send the data to the server
+    updateServerSettings({ 'AeEnable': newValue });
+}
+
+function adjustAeExposureMode() {
+    // Get the current state of the switch
+    const a = document.getElementById('AeEnable');
+    const newValue = aeEnableSwitch.checked;
+
+    // Send the data to the server
+    updateServerSettings({ 'AeEnable': newValue });
+}
+
+function adjustAeExposureMode(mode) {
+    // Convert mode to an integer
+    const modeInt = parseInt(mode);
+    // Update UI with the new value
+    updateUI({ AeExposureMode: modeInt });
+    // Update server settings
+    updateServerSettings({ AeExposureMode: modeInt });
+}
+
+function adjustAeFlickerMode(mode) {
+    // Convert mode to an integer
+    const modeInt = parseInt(mode);
+    // Update UI with the new value
+    updateUI({ AeFlickerMode: modeInt });
+    // Update server settings
+    updateServerSettings({ AeFlickerMode: modeInt });
+}
+
+function adjustAeFlickerPeriod() {
+    // Handle the input change here
+    var inputValue = document.getElementById('AeFlickerPeriod').value;
+    updateUI({ AeFlickerMode: modeInt });
+    // Update server settings
+    updateServerSettings({ AeFlickerMode: modeInt });
+}
+
+</script>
+
+{% endblock %}
+

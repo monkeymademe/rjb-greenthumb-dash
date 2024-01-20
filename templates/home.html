@@ -6,29 +6,87 @@
 <div class="row mb-3">
       <div class="col-md-8 themed-grid-col">
       <h2 class="display-5 fw-bold">Camera Feed</h2>
-      <img class="img-fluid" src="{{ url_for('video_feed') }}" alt="Camera Feed">
+      <div id="loadingOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.8); display: none; justify-content: center; align-items: center; z-index: 100;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
 </div>
-      <div class="col-6 col-md-4 themed-grid-col">
-<h2 class="display-5 fw-bold">Camera Settings</h2>
-<ul class="list-group">
-  <!-- AfMode -->
-  <li class="list-group-item active" aria-current="true">Auto Focus Mode</li>
-  <li class="list-group-item">
+
+<img class="img-fluid" id="cameraImage" src="{{ url_for('video_feed') }}" alt="Camera Feed">
+<button onclick="refreshCameraFeed()">Refresh Camera Feed</button>
       <div class="dropdown">
-          <button class="btn btn-secondary dropdown-toggle" type="button" id="afModeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-               AF Mode: Unknown
-           </button>
-           <ul class="dropdown-menu" aria-labelledby="AfMode" id="AfMode">
-               <li><button class="dropdown-item" type="button" onclick="adjustAutofocusMode('0')">Manual</button></li>
-               <li><button class="dropdown-item" type="button" onclick="adjustAutofocusMode('1')">Auto</button></li>
-               <li><button class="dropdown-item" type="button" onclick="adjustAutofocusMode('2')">Continuous</button></li>
-           </ul>
+        <button class="btn btn-secondary dropdown-toggle" type="button" id="hflipDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+             hflip
+         </button>
+         <ul class="dropdown-menu" aria-labelledby="hflip" id="hflip">
+             <li><button class="dropdown-item" type="button" onclick="adjusthflip('0')">Off</button></li>
+             <li><button class="dropdown-item" type="button" onclick="adjusthflip('1')">flip</button></li>
+         </ul>
       </div>
-  </li>
-  <!-- Gain and Exposure -->
-  <li class="list-group-item active" aria-current="true"">Gain and Exposure</li>
-  <li class="list-group-item">
-        <!-- AeEnable -->
+</div>
+<!-- ###### Start the Camera settings ###### -->
+<div class="col-6 col-md-4 themed-grid-col">
+<div class="accordion" id="accordionExample">
+    <!-- ###### Auto Focus Settings ###### -->
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+            Auto Focus Settings
+        </button>
+      </h2>
+      <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+        <div class="accordion-body">
+            <!-- AfMode -->
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="afModeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    AF Mode: Unknown
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="AfMode" id="AfMode">
+                    <li><button class="dropdown-item" type="button" onclick="adjustAutofocusMode('0')">Manual</button></li>
+                    <li><button class="dropdown-item" type="button" onclick="adjustAutofocusMode('1')">Auto</button></li>
+                    <li><button class="dropdown-item" type="button" onclick="adjustAutofocusMode('2')">Continuous</button></li>
+                </ul>
+            </div>
+            <hr>
+            <!-- AfRange -->
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="AfRangeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Af Range: Unknown
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="AfRange" id="AfRange">
+                    <li><button class="dropdown-item" type="button" onclick="adjustAfRange('0')">Normal</button></li>
+                    <li><button class="dropdown-item" type="button" onclick="adjustAfRange('1')">Macro</button></li>
+                    <li><button class="dropdown-item" type="button" onclick="adjustAfRange('2')">Full</button></li>
+                </ul>
+            </div>
+            <hr>
+            <!-- AfSpeed -->
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="AfSpeedDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Af Range: Unknown
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="AfSpeed" id="AfSpeed">
+                    <li><button class="dropdown-item" type="button" onclick="adjustAfSpeed('0')">Normal</button></li>
+                    <li><button class="dropdown-item" type="button" onclick="adjustAfSpeed('1')">Fast</button></li>
+                </ul>
+            </div>
+            <hr>
+
+
+            <!-- End of Line-->
+        </div>
+      </div>
+    </div>
+    <!-- ###### Gain and Exposure Settings ###### -->
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+            Gain and Exposure Settings
+        </button>
+      </h2>
+      <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+        <div class="accordion-body">
+          <!-- AeEnable -->
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" role="switch" id="AeEnable" onchange="adjustAeEnable()">
             <label class="form-check-label" for="AeEnable">Enable AEC/AGC algorithm</label>
@@ -78,25 +136,109 @@
                 <div id="emailHelp" class="form-text">in microseconds.</div>
             </div>
         </form>
-  </li>
-  <!-- Brightness -->
-  <li class="list-group-item active" aria-current="true">Brightness Control</li>
-  <li class="list-group-item">
-      <div class="form-group">
-            <label for="brightness" class="form-label" id="currentBrightness">Current Brightness:</label>
-            <input type="range" class="form-range" min="-1.0" max="1.0" step="0.1" id="Brightness" onchange="adjustBrightness(this.value)">
+        <hr>
+        <!-- AeMeteringMode -->
+        <div class="dropdown">
+          <button class="btn btn-secondary dropdown-toggle" type="button" id="AeMeteringModeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+               AE Metering Mode: Unknown
+           </button>
+           <ul class="dropdown-menu" aria-labelledby="AeMeteringMode" id="AeMeteringMode">
+               <li><button class="dropdown-item" type="button" onclick="adjustAeMeteringMode('0')">Centre Weighted</button></li>
+               <li><button class="dropdown-item" type="button" onclick="adjustAeMeteringMode('1')">Spot</button></li>
+               <li><button class="dropdown-item" type="button" onclick="adjustAeMeteringMode('2')">Matrix</button></li>
+               <li><button class="dropdown-item" type="button" onclick="adjustAeMeteringMode('3')">Custom</button></li>
+            </ul>
+        </div>
+        </div>
       </div>
-  </li>
+    </div>
+
+    <!-- ###### Auto White Balance Settings ###### -->
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+              Auto White Balance Settings
+          </button>
+        </h2>
+        <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+          <div class="accordion-body">
+            <!-- AwbEnable -->
+          <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="AwbEnable" onchange="adjustAwbEnable()">
+              <label class="form-check-label" for="AwbEnable">Enable AWB algorithm</label>
+          </div>
+          <hr>
+          <!-- AwbMode -->
+          <div class="dropdown">
+            <button class="btn btn-secondary dropdown-toggle" type="button" id="AwbModeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                White Balance Mode: Unknown
+             </button>
+             <ul class="dropdown-menu" aria-labelledby="AwbMode" id="AwbMode">
+                 <li><button class="dropdown-item" type="button" onclick="adjustAwbMode('0')">Auto</button></li>
+                 <li><button class="dropdown-item" type="button" onclick="adjustAwbMode('1')">Tungsten</button></li>
+                 <li><button class="dropdown-item" type="button" onclick="adjustAwbMode('2')">Fluorescent</button></li>
+                 <li><button class="dropdown-item" type="button" onclick="adjustAwbMode('3')">Indoor</button></li>
+                 <li><button class="dropdown-item" type="button" onclick="adjustAwbMode('4')">Daylight</button></li>
+                 <li><button class="dropdown-item" type="button" onclick="adjustAwbMode('5')">Cloudy</button></li>
+                 <li><button class="dropdown-item" type="button" onclick="adjustAwbMode('6')">Custom</button></li>
+             </ul>
+          </div>
+          <hr>
+         
+          
+
+          </div>
+        </div>
+      </div>
+      <!-- ###### Brightness & Contrast Settings ###### -->
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+            Brightness & Contrast Settings
+          </button>
+        </h2>
+        <div id="collapseFour" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+          <div class="accordion-body">
+            <!-- Brightness -->
+            <div class="form-group">
+                <label for="brightness" class="form-label" id="currentBrightness">Brightness:</label>
+                <input type="range" class="form-range" min="-1.0" max="1.0" step="0.1" id="Brightness" onchange="adjustBrightness(this.value)">
+            </div>
+            <hr>
+            <!-- Contrast -->
+            <div class="form-group">
+                <label for="contrast" class="form-label" id="currentContrast">Contrast:</label>
+                <input type="range" class="form-range" min="0.0" max="32.0" step="1.0" id="Contrast" onchange="adjustContrast(this.value)">
+            </div>
+            <hr>
+            <!-- Saturation -->
+            <div class="form-group">
+                <label for="saturation" class="form-label" id="currentSaturation">Saturation:</label>
+                <input type="range" class="form-range" min="0.0" max="32.0" step="1.0" id="Saturation" onchange="adjustSaturation(this.value)">
+            </div>
+            <hr>
+            <!-- Sharpness -->
+            <div class="form-group">
+                <label for="sharpness" class="form-label" id="currentSharpness">Sharpness:</label>
+                <input type="range" class="form-range" min="0.0" max="16.0" step="0.1" id="Sharpness" onchange="adjustSharpness(this.value)">
+            </div>
+            <hr>
+
+          </div>
+        </div>
+      </div>
+</div>
+<br>
+<ul class="list-group">
+  
+  
+  
   <!-- Template -->
   <li class="list-group-item active" aria-current="true">Template Header</li>
   <li class="list-group-item">
       Space for a setting 
   </li>
 </ul>
-
-
-constraint
-
 
 </div>
 </div>
@@ -105,11 +247,11 @@ document.addEventListener('DOMContentLoaded', function () {
     console.log('DOM content loaded');
 
     // Parse the JSON string into a JavaScript object
-    var initialSettings = {{ camera_settings | tojson }};
+    var liveSettings = {{ live_settings | tojson }};
 
     // Call the updateUI
 
-    updateUI(initialSettings);
+    updateUI(liveSettings);
 });
 
 const settings = {};
@@ -139,16 +281,82 @@ const aeExposureModeToString = (mode) => {
         default: return 'Unknown';
     }
 };
-const AeFlickerModeToString = (mode) => {
+const aeFlickerModeToString = (mode) => {
     switch (mode) {
         case 0: return 'Off';
         case 1: return 'Manual';
     }
 };
+const aeMeteringModeToString = (mode) => {
+    switch (mode) {
+        case 0: return 'Centre Weighted';
+        case 1: return 'Spot';
+        case 2: return 'Matrix';
+        case 3: return 'Custom';
+        default: return 'Unknown';
+    }
+};
+const afRangeToString = (mode) => {
+    switch (mode) {
+        case 0: return 'Normal';
+        case 1: return 'Macro';
+        case 2: return 'Full';
+        default: return 'Unknown';
+    }
+};
+const afSpeedToString = (mode) => {
+    switch (mode) {
+        case 0: return 'Normal';
+        case 1: return 'Fast';
+        default: return 'Unknown';
+    }
+};
+const awbModeToString = (mode) => {
+    switch (mode) {
+        case 0: return 'Auto';
+        case 1: return 'Tungsten';
+        case 2: return 'Fluorescent';
+        case 3: return 'Indoor';
+        case 4: return 'Daylight';
+        case 5: return 'Cloudy';
+        case 6: return 'Custom';
+        default: return 'Unknown';
+    }
+};
 
 function updateUI(settings) {
     for (const key in settings) {
-            if (key === 'AeFlickerPeriod') {
+            if (key === 'AwbMode') {
+                // Update button for AwbMode
+                const awbModeButton = document.getElementById('AwbModeDropdown');
+                if (awbModeButton) {
+                    awbModeButton.innerText = `Af Range: ${awbModeToString(settings[key])}`;
+                }
+            } else if (key === 'AwbEnable') {
+                // Update the switch state
+                const awbEnableSwitch = document.getElementById('AwbEnable');
+                if (awbEnableSwitch) {
+                    awbEnableSwitch.checked = settings[key];
+                }
+            } else if (key === 'AfSpeed') {
+                // Update button for AfSpeed
+                const afSpeedButton = document.getElementById('AfSpeedDropdown');
+                if (afSpeedButton) {
+                    afSpeedButton.innerText = `Af Speed: ${afSpeedToString(settings[key])}`;
+                }
+            } else if (key === 'AfRange') {
+                // Update button for AfRange
+                const afRangeButton = document.getElementById('AfRangeDropdown');
+                if (afRangeButton) {
+                    afRangeButton.innerText = `Af Range: ${afRangeToString(settings[key])}`;
+                }
+            } else if (key === 'AeMeteringMode') {
+                // Update button for AeMeteringMode
+                const aeMeteringModeButton = document.getElementById('AeMeteringModeDropdown');
+                if (aeMeteringModeButton) {
+                    aeMeteringModeButton.innerText = `AE Metering Mode: ${aeMeteringModeToString(settings[key])}`;
+                }
+            } else if (key === 'AeFlickerPeriod') {
                 // Update inputbox for AeFlickerPeriod
                 const aeFlickerPeriodInput = document.getElementById('AeFlickerPeriodDropdown');
                 if (aeFlickerPeriodInput) {
@@ -173,62 +381,70 @@ function updateUI(settings) {
                     aeEnableSwitch.checked = settings[key];
                 }
             } else if (key === 'Brightness') {
-            document.getElementById('Brightness').value = settings[key];
-            const brightnessSpan = document.getElementById('currentBrightness');
-            if (brightnessSpan) {
-                brightnessSpan.innerText = `Current Brightness: ${settings[key]}`;
+                document.getElementById('Brightness').value = settings[key];
+                const brightnessSpan = document.getElementById('currentBrightness');
+                if (brightnessSpan) {
+                    brightnessSpan.innerText = `Brightness: ${settings[key]}`;
+                }
+            } else if (key === 'Contrast') {
+                document.getElementById('Contrast').value = settings[key];
+                const contrastSpan = document.getElementById('currentContrast');
+                if (contrastSpan) {
+                    contrastSpan.innerText = `Contrast: ${settings[key]}`;
+                }
+            } else if (key === 'Saturation') {
+                document.getElementById('Saturation').value = settings[key];
+                const saturationSpan = document.getElementById('currentSaturation');
+                if (saturationSpan) {
+                    saturationSpan.innerText = `Saturation: ${settings[key]}`;
+                }
+            } else if (key === 'Sharpness') {
+                document.getElementById('Sharpness').value = settings[key];
+                const sharpnessSpan = document.getElementById('currentSharpness');
+                if (sharpnessSpan) {
+                    sharpnessSpan.innerText = `Sharpness: ${settings[key]}`;
+                }
+            } else if (key === 'AeConstraintMode') {
+                // Update button text for AeConstraint
+                const aeConstraintModeButton = document.getElementById('AeConstraintModeDropdown');
+                if (aeConstraintModeButton) {
+                    aeConstraintModeButton.innerText = `AE Constraint Mode: ${aeConstraintModeToString(settings[key])}`;
+                }
+            } else if (key === 'AfMode') {
+                // Update button text for AfMode
+                const afModeButton = document.getElementById('afModeDropdown');
+                if (afModeButton) {
+                    afModeButton.innerText = `AF Mode: ${afModeToString(settings[key])}`;
+                }
+            } else {
+                console.log(`Skipping unknown setting: ${key}`);
             }
-        } else if (key === 'AeConstraintMode') {
-            // Update button text for AeConstraint
-            const aeConstraintModeButton = document.getElementById('AeConstraintModeDropdown');
-            if (aeConstraintModeButton) {
-                aeConstraintModeButton.innerText = `AE Constraint Mode: ${aeConstraintModeToString(settings[key])}`;
-            }
-        } else if (key === 'AfMode') {
-            // Update button text for AfMode
-            const afModeButton = document.getElementById('afModeDropdown');
-            if (afModeButton) {
-                afModeButton.innerText = `AF Mode: ${afModeToString(settings[key])}`;
-            }
-        } else {
-            console.log(`Skipping unknown setting: ${key}`);
-        }
     }
 }
 
-//function handleSettingChange(event) {
-//    console.log('Slider changed:', event.target.value);
-//
-//    const key = event.target.id;
-//    const value = event.target.value;
-//
-    // Update UI with the new value
-//    updateUI({ [key]: value });
-//
-    // Update server settings
-//    updateServerSettings({ [key]: parseFloat(value) });
-//}
+////////////////////////////////////
+// Live Settings 
 
-    // Function to update server settings and UI
-    function updateServerSettings(data) {
-        fetch('/update_settings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Settings updated:', data);
-
-            // Update UI with the new settings
-            // updateUI(data);
-        })
-        .catch(error => {
-            console.error('Error updating settings:', error);
-        });
-    }
+// Function to update server settings and UI
+function updateLiveSettings(data) {
+    return fetch('/update_live_settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Settings updated:', data);
+        // Return the data to the next chain
+        return data;
+    })
+    .catch(error => {
+        console.error('Error updating settings:', error);
+        throw error;  // Re-throw the error for the next catch
+    });
+}
 
 function adjustAutofocusMode(mode) {
     // Convert mode to an integer
@@ -236,72 +452,181 @@ function adjustAutofocusMode(mode) {
     // Update UI with the new value
     updateUI({ AfMode: modeInt });
     // Update server settings
-    updateServerSettings({ AfMode: modeInt });
+    updateLiveSettings({ AfMode: modeInt });
 }
-
 function adjustAeConstraintMode(mode) {
     // Convert mode to an integer
     const modeInt = parseInt(mode);
     // Update UI with the new value
     updateUI({ AeConstraintMode: modeInt });
     // Update server settings
-    updateServerSettings({ AeConstraintMode: modeInt });
+    updateLiveSettings({ AeConstraintMode: modeInt });
 }
-
 function adjustBrightness(value) {
     console.log('Brightness changed:', value);
-
     // Update UI with the new value
     updateUI({ Brightness: value });
-
     // Update server settings
-    updateServerSettings({ Brightness: parseFloat(value) });
+    updateLiveSettings({ Brightness: parseFloat(value) });
 }
-
+function adjustContrast(value) {
+    console.log('Contrast changed:', value);
+    // Update UI with the new value
+    updateUI({ Contrast: value });
+    // Update server settings
+    updateLiveSettings({ Contrast: parseFloat(value) });
+}
+function adjustSaturation(value) {
+    console.log('Saturation changed:', value);
+    // Update UI with the new value
+    updateUI({ Saturation: value });
+    // Update server settings
+    updateLiveSettings({ Saturation: parseFloat(value) });
+}
+function adjustSharpness(value) {
+    console.log('Sharpness changed:', value);
+    // Update UI with the new value
+    updateUI({ Sharpness: value });
+    // Update server settings
+    updateLiveSettings({ Sharpness: parseFloat(value) });
+}
 function adjustAeEnable() {
     // Get the current state of the switch
     const aeEnableSwitch = document.getElementById('AeEnable');
     const newValue = aeEnableSwitch.checked;
-
     // Send the data to the server
-    updateServerSettings({ 'AeEnable': newValue });
+    updateLiveSettings({ 'AeEnable': newValue });
 }
-
+function adjustAwbEnable() {
+    // Get the current state of the switch
+    const awbEnableSwitch = document.getElementById('AwbEnable');
+    const newValue = awbEnableSwitch.checked;
+    // Send the data to the server
+    updateLiveSettings({ 'AwbEnable': newValue });
+}
 function adjustAeExposureMode() {
     // Get the current state of the switch
     const a = document.getElementById('AeEnable');
     const newValue = aeEnableSwitch.checked;
-
     // Send the data to the server
-    updateServerSettings({ 'AeEnable': newValue });
+    updateLiveSettings({ 'AeEnable': newValue });
 }
-
 function adjustAeExposureMode(mode) {
     // Convert mode to an integer
     const modeInt = parseInt(mode);
     // Update UI with the new value
     updateUI({ AeExposureMode: modeInt });
     // Update server settings
-    updateServerSettings({ AeExposureMode: modeInt });
+    updateLiveSettings({ AeExposureMode: modeInt });
 }
-
 function adjustAeFlickerMode(mode) {
     // Convert mode to an integer
     const modeInt = parseInt(mode);
     // Update UI with the new value
     updateUI({ AeFlickerMode: modeInt });
     // Update server settings
-    updateServerSettings({ AeFlickerMode: modeInt });
+    updateLiveSettings({ AeFlickerMode: modeInt });
 }
-
 function adjustAeFlickerPeriod() {
     // Handle the input change here
-    var inputValue = document.getElementById('AeFlickerPeriod').value;
-    updateUI({ AeFlickerMode: modeInt });
+    const modeInt = document.getElementById('AeFlickerPeriod').value;
+    updateUI({ AeFlickerPeriod: modeInt });
     // Update server settings
-    updateServerSettings({ AeFlickerMode: modeInt });
+    updateLiveSettings({ AeFlickerPeriod: modeInt });
+}
+function adjustAeMeteringMode(mode) {
+    // Convert mode to an integer
+    const modeInt = parseInt(mode);
+    // Update UI with the new value
+    updateUI({ AeMeteringMode: modeInt });
+    // Update server settings
+    updateLiveSettings({ AeMeteringMode: modeInt });
+}
+function adjustAfRange(mode) {
+    // Convert mode to an integer
+    const modeInt = parseInt(mode);
+    // Update UI with the new value
+    updateUI({ AfRange: modeInt });
+    // Update server settings
+    updateLiveSettings({ AfRange: modeInt });
+}
+function adjustAfSpeed(mode) {
+    // Convert mode to an integer
+    const modeInt = parseInt(mode);
+    // Update UI with the new value
+    updateUI({ AfSpeed: modeInt });
+    // Update server settings
+    updateLiveSettings({ AfSpeed: modeInt });
+}
+function adjustAwbMode(mode) {
+    // Convert mode to an integer
+    const modeInt = parseInt(mode);
+    // Update UI with the new value
+    updateUI({ AwbMode: modeInt });
+    // Update server settings
+    updateLiveSettings({ AwbMode: modeInt });
 }
 
+
+////////////////////////////////////
+// Feed Restarting Settings 
+
+// Function to update server settings and UI
+function updateRestartSettings(data) {
+    return fetch('/update_restart_settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Settings updated:', data);
+        // Update UI with the new settings
+        updateUI(data);
+        // Return the data to the next chain
+        return data;
+    })
+    .catch(error => {
+        console.error('Error updating settings:', error);
+        throw error;  // Re-throw the error for the next catch
+    });
+}
+
+function refreshCameraFeed() {
+        // Display the loading overlay
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        // Get the image element by ID
+        var imageElement = document.getElementById('cameraImage');
+        // Save the current source
+        var currentSrc = imageElement.src;
+        // Change the source to trigger a reload
+        imageElement.src = '';
+        // Restore the original source after a short delay (e.g., 100 milliseconds)
+        setTimeout(function () {
+            imageElement.src = currentSrc;
+            // Hide the loading overlay
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }, 100);
+}
+
+function adjusthflip(mode) {
+    // Convert mode to an integer
+    const modeInt = parseInt(mode);
+    // Update UI with the new value
+    updateUI({ hflip: modeInt });
+    // Update server settings and wait for it to complete
+    updateRestartSettings({ hflip: modeInt })
+        .then(() => {
+            // Refresh the camera feed after updating server settings
+            refreshCameraFeed();
+        })
+        .catch(error => {
+            console.error('Error updating server settings:', error);
+            // Handle the error if needed
+        });
+}
 </script>
 
 {% endblock %}

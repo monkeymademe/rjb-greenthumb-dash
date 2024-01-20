@@ -1,4 +1,4 @@
-import os, io, logging, json
+import os, io, logging, json, time
 from datetime import datetime
 from threading import Condition
 
@@ -16,6 +16,8 @@ scheduler = BackgroundScheduler()
 
 # Int Picamera2 and default settings
 picam2 = Picamera2()
+#main_stream = {"size": (2304, 1296)}
+video_config = picam2.create_video_configuration()
 output = None
 
 class StreamingOutput(io.BufferedIOBase):
@@ -59,42 +61,73 @@ def load_settings(settings_file):
 ####################
 @app.route("/")
 def home():
-    return render_template("home.html", title="Home", camera_settings=camera_settings)
+    return render_template("home.html", title="Home", live_settings=live_settings)
 
-    #return render_template("home.html", title="Home", camera_settings=json.dumps(camera_settings))
+    #return render_template("home.html", title="Home", live_settings=json.dumps(live_settings))
 
 @app.route('/video_feed')
 def video_feed():
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # Your existing route to update settings
-@app.route('/update_settings', methods=['POST'])
+@app.route('/update_live_settings', methods=['POST'])
 def update_settings():
-    global camera_settings
+    global live_settings, picam2, video_config
     try:
         # Parse JSON data from the request
         data = request.get_json()
-        print(data)
         # Update only the keys that are present in the data
         for key in data:
-            if key in camera_settings:
-                if key in ('AfMode', 'AeConstraintMode', 'AeExposureMode', 'AeFlickerMode', 'AeFlickerPeriod') :
-                    camera_settings[key] = int(data[key])
-                elif key == 'Brightness':
-                    camera_settings[key] = float(data[key])
-                elif key == 'AeEnable':
-                    camera_settings[key] = data[key]
+            if key in live_settings:
+                if key in ('AfMode', 'AeConstraintMode', 'AeExposureMode', 'AeFlickerMode', 'AeFlickerPeriod', 'AeMeteringMode', 'AfRange', 'AfSpeed', 'AwbMode') :
+                    live_settings[key] = int(data[key])
+                elif key in ('Brightness', 'Contrast', 'Saturation', 'Sharpness'):
+                    live_settings[key] = float(data[key])
+                elif key in ('AeEnable', 'AwbEnable'):
+                    live_settings[key] = data[key]
+            elif key == "hflip":
+                print(video_config)
+                print("trying")
+                try:
+                    video_config["transform"] = Transform(hflip=int(data[key]))
+                except Exception as e:
+                    logging.error(f"Error loading camera settings: {e}")
+                print("trying")
+                try:
+                    picam2.stop_recording()
+                except Exception as e:
+                    logging.error(f"Error loading camera settings: {e}")
+                picam2.configure(video_config)
+                start_camera_stream()
+
         # Update the configuration of the video feed
-        configure_camera(camera_settings)
-        return jsonify(success=True, message="Settings updated successfully", settings=camera_settings)
+        configure_camera(live_settings)
+        return jsonify(success=True, message="Settings updated successfully", settings=live_settings)
+    except Exception as e:
+        return jsonify(success=False, message=str(e))
+
+@app.route('/update_restart_settings', methods=['POST'])
+def update_restart_settings():
+    global live_settings, picam2, video_config
+    try:
+        data = request.get_json()
+        # Update settings that require a restart
+        for key in data:
+            if key in live_settings:
+                if key in ('list_of_restart_settings'):
+                    live_settings[key] = data[key]
+        # Perform any additional steps for restarting the stream
+        stop_camera_stream()
+        start_camera_stream()
+        return jsonify(success=True, message="Restart settings updated successfully", settings=live_settings)
     except Exception as e:
         return jsonify(success=False, message=str(e))
 
 @app.route('/get_settings')
 def get_settings():
-    global camera_settings
+    global live_settings
     try:
-        return jsonify(camera_settings)
+        return jsonify(live_settings)
     except Exception as e:
         return jsonify(error=str(e))
 
@@ -103,21 +136,28 @@ def get_settings():
 ####################
 
 def start_camera_stream():
-    global picam2, output
-    video_config = picam2.create_video_configuration()
+    global picam2, output, video_config
+    #video_config = picam2.create_video_configuration()
     # Flip Camera #################### Make configurable
     video_config["transform"] = Transform(hflip=1, vflip=1)
     picam2.configure(video_config)
+    print(video_config)
     output = StreamingOutput()
     picam2.start_recording(JpegEncoder(), FileOutput(output))
+    time.sleep(1)
+    #picam2.stop_recording()
+
 
 ####################
 # Configure Camera
 ####################
 
-def configure_camera(camera_settings):
-    print(camera_settings)
-    picam2.set_controls(camera_settings)
+def flipcamera(live_settings):
+    video_config["transform"] = Transform(hflip=1, vflip=1)
+
+def configure_camera(live_settings):
+    print(live_settings)
+    picam2.set_controls(live_settings)
 
 if __name__ == "__main__":
     # Configure logging
@@ -127,8 +167,8 @@ if __name__ == "__main__":
     start_camera_stream()
 
     # Load and set camera settings
-    camera_settings = load_settings("config.json")
-    configure_camera(camera_settings)
+    live_settings = load_settings("live-settings.json")
+    configure_camera(live_settings)
 
     # Start the Flask application
     app.run(debug=False, host='0.0.0.0', port=8080)

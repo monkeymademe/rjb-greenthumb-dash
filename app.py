@@ -17,9 +17,22 @@ scheduler = BackgroundScheduler()
 # Int Picamera2 and default settings
 picam2 = Picamera2()
 half_resolution = [dim // 2 for dim in picam2.sensor_resolution]
+full_resolution = [picam2.sensor_resolution]
+print(full_resolution)
 main_stream = {"size": half_resolution}
-video_config = picam2.create_video_configuration()
+video_config = picam2.create_video_configuration(main_stream)
 output = None
+
+# Set the path where the images will be stored
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Create the upload folder if it doesn't exist
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Variable to track timelapse status
+timelapse_running = False
+
 
 class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
@@ -69,6 +82,17 @@ def home():
 @app.route('/video_feed')
 def video_feed():
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/image_gallery')
+def image_gallery():
+    # Specify the path to the uploads folder
+    uploads_path = UPLOAD_FOLDER  # Adjust the path accordingly
+
+    # Get a list of all image files in the uploads folder
+    image_files = [f for f in os.listdir(uploads_path) if f.endswith(('.jpg', '.jpeg', '.png', '.gif'))]
+
+    # Pass the list of image files to the template
+    return render_template('image_gallery.html', image_files=image_files)
 
 # Your existing route to update settings
 @app.route('/update_live_settings', methods=['POST'])
@@ -140,6 +164,40 @@ def reset_default_live_settings():
     except Exception as e:
         return jsonify(error=str(e))
 
+# Function to take a photo and save it
+def take_photo():
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    filename = f"{timestamp}.jpg"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    global picam2
+    try:
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        image_name = f'image_{timestamp}.jpg'
+        request = picam2.capture_request()
+        request.save("main", filepath)
+        request.release()
+        logging.info(f"Image captured successfully. Path: {filepath}")
+    except Exception as e:
+        logging.error(f"Error capturing image: {e}")
+    # Replace the following line with your actual code to capture an image
+    # capture_image_and_save(filepath)
+
+# Route to start/stop the timelapse
+@app.route('/start_stop_timelapse', methods=['POST'])
+def start_stop_timelapse():
+    global timelapse_running
+
+    if timelapse_running:
+        # Stop the timelapse
+        scheduler.remove_job('timelapse')
+        timelapse_running = False
+        return jsonify(status='stopped')
+    else:
+        # Start the timelapse
+        scheduler.add_job(take_photo, trigger='interval', seconds=1, id='timelapse')
+        timelapse_running = True
+        return jsonify(status='started')
+
 ####################
 # Start Camera Stream
 ####################
@@ -148,7 +206,7 @@ def start_camera_stream():
     global picam2, output, video_config
     #video_config = picam2.create_video_configuration()
     # Flip Camera #################### Make configurable
-    #video_config["transform"] = Transform(hflip=1, vflip=1)
+    video_config["transform"] = Transform(hflip=1, vflip=1)
     picam2.configure(video_config)
     output = StreamingOutput()
     picam2.start_recording(JpegEncoder(), FileOutput(output))
@@ -168,6 +226,8 @@ def configure_camera(live_settings):
 if __name__ == "__main__":
     # Configure logging
     logging.basicConfig(level=logging.INFO)  # Change the level to DEBUG for more detailed logging
+
+    scheduler.start()
 
     # Start Camera stream
     start_camera_stream()

@@ -3,14 +3,23 @@
 {% block content %}
 <div class="container-xxl">
     <div class="row">
-        <div class="col-8 pt-5">
+        <div class="col-md-8 pt-5">
             <!-- ###### Main Content ###### -->
             <h2 class="display-5 fw-bold pt-4">Camera Feed</h2>
             <img class="img-fluid" id="cameraImage" alt="Camera Feed">
-            <ul class="list-group">
-                <!-- Template -->
+            <!-- Flip Camera Settings -->
+            <ul class="list-group pt-5 pb-5">
                 <li class="list-group-item active" aria-current="true">Settings Control</li>
                 <li class="list-group-item">
+                    <input class="form-check-input" type="checkbox" role="switch" id="hflip">
+                    <label class="form-check-label" for="AeEnable">Horazontal Flip</label>
+                    <input class="form-check-input" type="checkbox" role="switch" id="vflip">
+                    <label class="form-check-label" for="AeEnable">Vertical Flip </label>
+                    <button type="button" class="btn btn-primary" onclick="adjustflip()">Set</button>
+                </li>
+<li class="list-group-item">
+		    <button id="timelapseButton">Start Timelapse</button>
+
                     <button type="button" class="btn btn-primary" onclick="resetsettings()">Reset</button>
                 </li>
             </ul>
@@ -105,7 +114,7 @@
                             <!-- AeEnable -->
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="AeEnable" onchange="adjustAeEnable()">
-                                <label class="form-check-label" for="AeEnable">Enable AEC/AGC algorithm</label>
+                                <label class="form-check-label" for="AeEnable">Enable Changes to AEC/AGC algorithm</label>
                             </div>
                             <hr>
                             <!-- AeConstraintMode -->
@@ -322,6 +331,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Set the source attribute to start loading the image
         cameraImage.src = "{{ url_for('video_feed') }}";
+    });
+
+document.getElementById('timelapseButton').addEventListener('click', function() {
+        // Send a POST request to start/stop the timelapse
+        fetch('/start_stop_timelapse', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => console.log(data));
     });
 
 const settings = {};

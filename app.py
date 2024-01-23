@@ -16,7 +16,8 @@ scheduler = BackgroundScheduler()
 
 # Int Picamera2 and default settings
 picam2 = Picamera2()
-#main_stream = {"size": (2304, 1296)}
+half_resolution = [dim // 2 for dim in picam2.sensor_resolution]
+main_stream = {"size": half_resolution}
 video_config = picam2.create_video_configuration()
 output = None
 
@@ -79,20 +80,17 @@ def update_settings():
         # Update only the keys that are present in the data
         for key in data:
             if key in live_settings:
-                if key in ('AfMode', 'AeConstraintMode', 'AeExposureMode', 'AeFlickerMode', 'AeFlickerPeriod', 'AeMeteringMode', 'AfRange', 'AfSpeed', 'AwbMode') :
+                if key in ('AfMode', 'AeConstraintMode', 'AeExposureMode', 'AeFlickerMode', 'AeFlickerPeriod', 'AeMeteringMode', 'AfRange', 'AfSpeed', 'AwbMode', 'ExposureTime') :
                     live_settings[key] = int(data[key])
-                elif key in ('Brightness', 'Contrast', 'Saturation', 'Sharpness'):
+                elif key in ('Brightness', 'Contrast', 'Saturation', 'Sharpness', 'ExposureValue', 'LensPosition'):
                     live_settings[key] = float(data[key])
                 elif key in ('AeEnable', 'AwbEnable'):
                     live_settings[key] = data[key]
             elif key == "hflip":
-                print(video_config)
-                print("trying")
                 try:
                     video_config["transform"] = Transform(hflip=int(data[key]))
                 except Exception as e:
                     logging.error(f"Error loading camera settings: {e}")
-                print("trying")
                 try:
                     picam2.stop_recording()
                 except Exception as e:
@@ -131,6 +129,17 @@ def get_settings():
     except Exception as e:
         return jsonify(error=str(e))
 
+@app.route('/reset_default_live_settings', methods=['GET'])
+def reset_default_live_settings():
+    global live_settings
+    try:
+        default_live_settings = load_settings("live-settings.json")
+        live_settings = default_live_settings
+        configure_camera(live_settings)
+        return jsonify(default_live_settings)
+    except Exception as e:
+        return jsonify(error=str(e))
+
 ####################
 # Start Camera Stream
 ####################
@@ -139,13 +148,11 @@ def start_camera_stream():
     global picam2, output, video_config
     #video_config = picam2.create_video_configuration()
     # Flip Camera #################### Make configurable
-    video_config["transform"] = Transform(hflip=1, vflip=1)
+    #video_config["transform"] = Transform(hflip=1, vflip=1)
     picam2.configure(video_config)
-    print(video_config)
     output = StreamingOutput()
     picam2.start_recording(JpegEncoder(), FileOutput(output))
     time.sleep(1)
-    #picam2.stop_recording()
 
 
 ####################
@@ -156,7 +163,6 @@ def flipcamera(live_settings):
     video_config["transform"] = Transform(hflip=1, vflip=1)
 
 def configure_camera(live_settings):
-    print(live_settings)
     picam2.set_controls(live_settings)
 
 if __name__ == "__main__":
@@ -168,7 +174,7 @@ if __name__ == "__main__":
 
     # Load and set camera settings
     live_settings = load_settings("live-settings.json")
-    configure_camera(live_settings)
+    #configure_camera(live_settings)
 
     # Start the Flask application
     app.run(debug=False, host='0.0.0.0', port=8080)

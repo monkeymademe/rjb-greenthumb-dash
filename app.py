@@ -10,9 +10,19 @@ from picamera2.encoders import JpegEncoder
 from picamera2.outputs import FileOutput
 from libcamera import Transform, controls
 
+
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+
+
 # Int Flask
 app = Flask(__name__)
 scheduler = BackgroundScheduler()
+
+app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///picam2webui_db.sqlite3"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
 
 # Int Picamera2 and default settings
 picam2 = Picamera2()
@@ -75,9 +85,11 @@ def load_settings(settings_file):
 ####################
 @app.route("/")
 def home():
-    return render_template("home.html", title="Home", live_settings=live_settings)
+    return render_template("home.html", title="Home", live_settings=live_settings, restart_settings=restart_settings)
 
-    #return render_template("home.html", title="Home", live_settings=json.dumps(live_settings))
+@app.route("/camerasettings")
+def camerasettings():
+    return render_template("camerasettings.html", title="Camera Settings", live_settings=live_settings, restart_settings=restart_settings)
 
 @app.route('/video_feed')
 def video_feed():
@@ -110,18 +122,6 @@ def update_settings():
                     live_settings[key] = float(data[key])
                 elif key in ('AeEnable', 'AwbEnable'):
                     live_settings[key] = data[key]
-            elif key == "hflip":
-                try:
-                    video_config["transform"] = Transform(hflip=int(data[key]))
-                except Exception as e:
-                    logging.error(f"Error loading camera settings: {e}")
-                try:
-                    picam2.stop_recording()
-                except Exception as e:
-                    logging.error(f"Error loading camera settings: {e}")
-                picam2.configure(video_config)
-                start_camera_stream()
-
         # Update the configuration of the video feed
         configure_camera(live_settings)
         return jsonify(success=True, message="Settings updated successfully", settings=live_settings)
@@ -130,16 +130,18 @@ def update_settings():
 
 @app.route('/update_restart_settings', methods=['POST'])
 def update_restart_settings():
-    global live_settings, picam2, video_config
+    global restart_settings, picam2, video_config
     try:
         data = request.get_json()
-        # Update settings that require a restart
-        for key in data:
-            if key in live_settings:
-                if key in ('list_of_restart_settings'):
-                    live_settings[key] = data[key]
-        # Perform any additional steps for restarting the stream
         stop_camera_stream()
+        transform = Transform()
+        # Update settings that require a restart
+        for key, value in data.items():
+            if key in restart_settings:
+                if key in ('hflip', 'vflip'):
+                    restart_settings[key] = data[key]
+                    setattr(transform, key, value)
+        video_config["transform"] = transform
         start_camera_stream()
         return jsonify(success=True, message="Restart settings updated successfully", settings=live_settings)
     except Exception as e:
@@ -155,12 +157,18 @@ def get_settings():
 
 @app.route('/reset_default_live_settings', methods=['GET'])
 def reset_default_live_settings():
-    global live_settings
+    global live_settings, restart_settings
     try:
-        default_live_settings = load_settings("live-settings.json")
-        live_settings = default_live_settings
+        live_settings = load_settings("live-settings.json")
+        restart_settings = load_settings("restart-settings.json")
+        # Combine live_settings and extra_data in the response
+        response_data = {
+            'live_settings': live_settings,
+            'restart_settings': restart_settings
+        }
         configure_camera(live_settings)
-        return jsonify(default_live_settings)
+
+        return jsonify(response_data)
     except Exception as e:
         return jsonify(error=str(e))
 
@@ -206,10 +214,15 @@ def start_camera_stream():
     global picam2, output, video_config
     #video_config = picam2.create_video_configuration()
     # Flip Camera #################### Make configurable
-    video_config["transform"] = Transform(hflip=1, vflip=1)
+    # video_config["transform"] = Transform(hflip=1, vflip=1)
     picam2.configure(video_config)
     output = StreamingOutput()
     picam2.start_recording(JpegEncoder(), FileOutput(output))
+    time.sleep(1)
+
+def stop_camera_stream():
+    global picam2
+    picam2.stop_recording()
     time.sleep(1)
 
 
@@ -223,6 +236,18 @@ def flipcamera(live_settings):
 def configure_camera(live_settings):
     picam2.set_controls(live_settings)
 
+def restart_configure_camera(restart_settings):
+        stop_camera_stream()
+        transform = Transform()
+        # Update settings that require a restart
+        for key, value in data.items():
+            if key in restart_settings:
+                if key in ('hflip', 'vflip'):
+                    restart_settings[key] = data[key]
+                    setattr(transform, key, value)
+        video_config["transform"] = transform
+        start_camera_stream()
+
 if __name__ == "__main__":
     # Configure logging
     logging.basicConfig(level=logging.INFO)  # Change the level to DEBUG for more detailed logging
@@ -234,6 +259,7 @@ if __name__ == "__main__":
 
     # Load and set camera settings
     live_settings = load_settings("live-settings.json")
+    restart_settings = load_settings("restart-settings.json")
     #configure_camera(live_settings)
 
     # Start the Flask application
